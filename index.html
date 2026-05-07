@@ -370,7 +370,7 @@ async function sendMsg() {
     const prompt = `다음은 (주)산하에코종합건설 온보딩 자료 전체 내용입니다:\n\n${CONTEXT}\n\n위 내용을 바탕으로 신입사원의 질문에 친절하고 간결하게 한국어로 답해주세요. 자료에 없는 내용은 "온보딩 자료에 해당 내용이 없습니다. 멘토(사수)에게 직접 확인해보세요!"라고 안내해주세요.\n\n질문: ${q}`;
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -380,13 +380,22 @@ async function sendMsg() {
       }
     );
     const data = await res.json();
+
+    if (!res.ok) {
+      const errMsg = data.error?.message || `HTTP ${res.status}`;
+      document.getElementById('typing-bub')?.closest('.msg')?.remove();
+      addMsg('ai', `❌ API 오류: ${errMsg}\n\nAPI Key가 올바른지, Google AI Studio에서 발급받은 키인지 확인해주세요.`);
+      btn.disabled = false;
+      return;
+    }
+
     const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || '답변을 가져오지 못했습니다.';
     document.getElementById('typing-bub')?.closest('.msg')?.remove();
     addMsg('ai', answer);
     history.push({ role: 'ai', content: answer });
   } catch (e) {
     document.getElementById('typing-bub')?.closest('.msg')?.remove();
-    addMsg('ai', '오류가 발생했습니다. API Key와 네트워크 상태를 확인해주세요.');
+    addMsg('ai', `❌ 네트워크 오류: ${e.message}\n\n인터넷 연결을 확인하거나 페이지를 새로고침 후 다시 시도해주세요.`);
   }
   btn.disabled = false;
   input.focus();
