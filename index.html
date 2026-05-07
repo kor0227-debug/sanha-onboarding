@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>산하에코 온보딩 AI 검색</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f7f6f3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+  #app {
+    width: 100%;
+    max-width: 680px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e5e5;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 90vh;
+    max-height: 700px;
+  }
+  #header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e5e5;
+    background: #fff;
+  }
+  #header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #header p { font-size: 12px; color: #999; margin-top: 3px; }
+  #api-setup {
+    padding: 20px;
+    background: #fafafa;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  #api-setup input {
+    flex: 1;
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+    font-family: monospace;
+  }
+  #api-setup input:focus { outline: none; border-color: #7c6ff7; }
+  #api-setup button {
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    background: #7c6ff7;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #api-setup button:hover { background: #6558e8; }
+  .api-notice {
+    font-size: 11px;
+    color: #e67e22;
+    padding: 8px 20px;
+    background: #fef9f0;
+    border-bottom: 1px solid #fde8c0;
+  }
+  .chips-wrap {
+    padding: 12px 16px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    border: 1px solid #e0e0e0;
+    background: #fafafa;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip:hover { background: #7c6ff7; color: #fff; border-color: #7c6ff7; }
+  #chat-box {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg { display: flex; gap: 8px; align-items: flex-start; max-width: 88%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .avatar.ai { background: #eeedfe; color: #4c3fc0; }
+  .avatar.user { background: #e8f4fd; color: #1a73e8; }
+  .bubble {
+    font-size: 14px;
+    line-height: 1.65;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    background: #fff;
+    color: #1a1a1a;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.user .bubble {
+    background: #e8f4fd;
+    border-color: transparent;
+    color: #0d47a1;
+  }
+  .typing { display: flex; gap: 4px; align-items: center; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #aaa; animation: blink 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+  #input-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid #e5e5e5;
+    background: #fff;
+  }
+  #q {
+    flex: 1;
+    font-size: 14px;
+    padding: 9px 13px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    background: #fafafa;
+    color: #333;
+    resize: none;
+  }
+  #q:focus { outline: none; border-color: #7c6ff7; background: #fff; }
+  #send-btn {
+    padding: 9px 16px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: none;
+    background: #7c6ff7;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #send-btn:hover { background: #6558e8; }
+  #send-btn:disabled { background: #c5bff7; cursor: default; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <h1>🏗️ 산하에코 온보딩 AI 검색</h1>
+    <p>온보딩 자료 전체에서 궁금한 내용을 바로 찾아드려요</p>
+  </div>
+
+  <div id="api-setup">
+    <input type="password" id="api-key" placeholder="Gemini API Key를 입력하세요 (AIza...)" />
+    <button onclick="setKey()">저장</button>
+  </div>
+  <div class="api-notice" id="api-notice">
+    ⚠️ API Key를 입력해야 검색이 가능합니다. Google AI Studio에서 무료로 발급받으세요 → aistudio.google.com
+  </div>
+
+  <div class="chips-wrap">
+    <span class="chip" onclick="ask('회의는 언제, 몇 시에 해요?')">📅 회의 시간</span>
+    <span class="chip" onclick="ask('연차는 어떻게 신청하나요?')">🏖️ 연차 신청</span>
+    <span class="chip" onclick="ask('법인카드 사용 후 어떻게 정산해요?')">💳 법인카드 정산</span>
+    <span class="chip" onclick="ask('직급 체계가 어떻게 되나요?')">👔 직급 체계</span>
+    <span class="chip" onclick="ask('복합기는 어디 있나요?')">🖨️ 복합기 위치</span>
+    <span class="chip" onclick="ask('월급에서 어떤 항목이 공제되나요?')">💰 급여 공제</span>
+    <span class="chip" onclick="ask('법인차량은 어떻게 사용하나요?')">🚗 법인차량</span>
+    <span class="chip" onclick="ask('첫 주에 해야 할 일이 뭐예요?')">✅ 첫 주 미션</span>
+  </div>
+
+  <div id="chat-box">
+    <div class="msg ai">
+      <div class="avatar ai">S</div>
+      <div class="bubble">안녕하세요! 저는 (주)산하에코종합건설 온보딩 자료를 기반으로 질문에 답해드리는 AI 도우미예요 🏗️
+
+API Key를 입력하신 후, 궁금한 내용을 자유롭게 물어보세요!
+위 버튼을 눌러도 되고, 직접 타이핑해서 질문하셔도 됩니다.</div>
+    </div>
+  </div>
+
+  <div id="input-row">
+    <input id="q" type="text" placeholder="궁금한 내용을 입력하세요... (Enter로 전송)" />
+    <button id="send-btn" onclick="sendMsg()">전송</button>
+  </div>
+</div>
+
+<script>
+const CONTEXT = `
+[산하에코종합건설 온보딩 자료 전체 내용]
+
+=== 회사 소개 ===
+- 회사명: (주)산하에코종합건설
+- 사무실: 경기도 성남시 중원구 양현로 405번길 4-11 유아이빌딩 9층 / Tel: 031-757-3038
+- 본사: 경기도 화성시 동탄감배산로 143, 202동 1513호
+- 사훈: 긍정, 열정, 창의 / 핵심가치: 진심, 존중, 배려
+- 경영이념: 고객만족을 위한 가치창조, 직원의 행복, 정도·인재 경영을 통한 번영, 사회공헌
+
+=== 2026년 중점 추진 전략 ===
+1. 내실경영 안정성장: 튼튼한 재무 구조와 정교한 시스템을 토대로 어떤 위기 상황에도 흔들림 없이 성장하는 기업
+2. 기업문화 정착확산: 깊이 공감하는 확고한 핵심 가치 실천을 통해 모든 임직원이 한마음 한뜻으로 나아가는 기업
+3. 핵심인재 확보양성: 능력 중심의 공정한 보상 체계를 바탕으로 우수한 핵심 인재를 발굴하고 성장시키는 기업
+
+=== 직급 체계 ===
+대표이사 → 전무 → 상무 → 수석 → 책임 → 선임 → 인턴
+호칭: 직급명+님 (예: 홍길동 책임님, 김철수 선임님)
+모든 구성원은 서로 존댓말 사용
+
+=== 부서 구성 ===
+- 경영기획실: 예산/경영계획, 조직/리스크 관리, 홍보/IR
+- 경영지원본부: 인사/총무, 회계/세무, 계약 관리
+- 민간사업본부: 수주 영업, 입찰/계약, 금융/사업 지원
+- 공공사업본부: 공공영업(턴키, 기술제안, BTL), 공공사업
+- 건축사업본부: 견적예산팀, 건축팀
+
+=== 근무시간 및 출퇴근 ===
+- 기본 근무시간: 08:30~17:30 (점심 11:30~13:00)
+- 유연근무제: 08:00~17:00 / 08:30~17:30 / 09:00~18:00 중 분기별 선택
+- 금요일 패밀리 데이: 1시간 조기 퇴근
+- 출퇴근 체크: PC 또는 모바일 하이웍스 메신저 (모바일은 사업장 반경 100m 이내)
+
+=== 휴가 ===
+- 신청 방법: 하이웍스 > 전자결재 > 휴가 신청서 작성 및 결재
+- 1년 미만: 1개월 개근 시 1일 발생 (최대 11일)
+- 1년 이상: 15일, 3년 이상 매 2년마다 1일 가산, 최대 25일
+- 반차(4시간), 반반차(2시간) 단위 사용 가능
+
+=== 급여 ===
+- 지급일: 매월 말일 (휴일이면 전일 지급)
+- 공제 항목: 소득세(간이세액표 기준), 지방소득세(소득세의 10%), 국민연금(4.5%), 건강보험(3.545%), 장기요양보험(건강보험료의 12.95%), 고용보험(0.9%)
+- 실수령액 = 세전 월급 - (소득세 + 지방소득세 + 국민연금 + 건강보험 + 장기요양보험 + 고용보험)
+
+=== 법인카드 및 지출결의서 ===
+- 사용 당일 경영지원본부 김애정 책임에게 카톡으로 사용내역 전달 (부서명, 일자, 금액, 내역, 사유)
+- 정산: 매월 말일, 지출결의서 엑셀 작성 → 출력 후 결재 → 영수증 첨부하여 김애정 책임에게 실물 전달
+- 결재라인: 50만원 이하 팀장 전결 / 50만원 초과 본부장(또는 실장) 전결
+
+=== 회의 운영 ===
+- 전체 회의: 매주 월요일 10:00
+  - 첫째 주: 수주전략회의 (전체 참석)
+  - 둘째 주: 주간회의 (전체 참석) + 회의 후 전체 점심식사
+  - 셋째 주: 주간회의(서면) - 대면 없음
+  - 넷째 주: 주간회의 (전체 참석) + 회의 후 전체 점심식사
+  - 다섯째 주: 주간회의(서면) - 대면 없음
+- 부서별 회의: 경영기획실 매일 오전 9시 / 건축사업본부 매주 금요일 오전 또는 오후 / 그 외 수시
+- 회의 자료: 금요일 오후 3시까지 하이웍스 업무관리에 각 부서별 담당자 업로드
+- 회의 시작 30분~1시간 전에 단톡방에 회의자료.pdf 공유
+
+=== 하이웍스 주요 기능 ===
+1. 메일: 공식 이메일, 입사 후 경영지원본부에서 주소 안내
+2. 게시판: 공지사항, 사내 규정, 자료실, 인사발령, 사내연락망
+3. 일정: 회사 공동 일정, 공동연차일, 법인차량 예약 (구글 캘린더 연동 가능)
+4. 근무/경비: 출퇴근 기록, 근태 현황, 잔여 연차, 경비 등록/청구
+5. 전자결재: 휴가신청 등 공식 결재 문서 기안 및 승인 (팀원→팀장→본부장)
+6. 업무관리: 주간/월간 회의록 확인, 업무 과제 관리
+
+=== 법인인감/사용인감 ===
+- 법인인감: 법원 등록 공식 도장, 계약서·등기 등 사용, 인감증명서 첨부 필요
+- 사용인감: 사내 내부 결재 등 일상 업무에 사용
+- 절차: 승인서 작성 → 결재라인 승인 → 인감 수령(고해연 책임 또는 경영지원본부장) → 관리대장 기재
+
+=== 사무 환경 ===
+- 복합기·파쇄기: 공공사업본부 자리에 위치 / A4용지는 파쇄기 오른쪽 선반
+- 복합기 모델: SINDOH D450/D730/CM Series PCL
+- 비품 부족 시: 경영지원본부 문의
+- 조명/전광판 리모컨: 고해연 책임 자리 앞 서랍 위
+
+=== 업무용 차량 ===
+- 법인 차량 2대: 246오3069, 190호7800
+- 주차: KB주차타워 (회사 인근)
+- 차량 키: 탕비실 서랍장 안쪽 벽면
+- 사용 전: 하이웍스 캘린더에 예약 필수 (제목: 차량번호+이름, 내용: 목적지)
+- 사용 후: 탕비실 차량 운행 기록부 기재 필수
+
+=== 제주 산하원 (복지) ===
+- 임직원 연수원/휴식처 (2024년 5월 준공)
+- 예약: 대진주택건설 김은주 선임(010-5239-2812)에게 개별 연락
+- 주소: 제주특별자치도 서귀포시 표선면 토산중앙로16번길 24
+
+=== 진행 중인 주요 프로젝트 ===
+공사중: 인천검단 AA22BL(1,048세대, 2027.02 준공예정), 청주테크노폴리스 A8BL(1,450세대, 2027.12), A7BL(576세대, 2028.01)
+착공예정: 여수죽림 A7BL(1,343세대, 2026.05 착공예정)
+
+=== 첫 주 온보딩 미션 ===
+- 하이웍스 설치 및 로그인 테스트
+- 사내 연락망 및 조직도 확인
+- 하이웍스 회의록에서 회의 문서 읽기
+- 하이웍스 게시판 훑어보기
+- 근로계약서 및 제출 서류 제출
+- 멘토(사수)와 첫 주 온보딩 피드백 티타임
+`;
+
+let API_KEY = '';
+let history = [];
+
+function setKey() {
+  const val = document.getElementById('api-key').value.trim();
+  if (!val.startsWith('AIza')) {
+    alert('올바른 Gemini API Key를 입력해주세요. (AIza로 시작)');
+    return;
+  }
+  API_KEY = val;
+  document.getElementById('api-notice').style.display = 'none';
+  document.getElementById('api-setup').style.display = 'none';
+  addMsg('ai', '✅ API Key가 저장되었습니다! 이제 질문해보세요.');
+}
+
+const chatBox = document.getElementById('chat-box');
+const input = document.getElementById('q');
+const btn = document.getElementById('send-btn');
+
+function addMsg(role, text, isTyping = false) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'avatar ' + role;
+  av.textContent = role === 'ai' ? 'S' : '나';
+  wrap.appendChild(av);
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  if (isTyping) {
+    bub.innerHTML = '<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+    bub.id = 'typing-bub';
+  } else {
+    bub.textContent = text;
+  }
+  wrap.appendChild(bub);
+  chatBox.appendChild(wrap);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  return bub;
+}
+
+async function ask(q) { input.value = q; await sendMsg(); }
+
+async function sendMsg() {
+  const q = input.value.trim();
+  if (!q) return;
+  if (!API_KEY) { alert('먼저 API Key를 입력해주세요!'); return; }
+  input.value = '';
+  btn.disabled = true;
+  addMsg('user', q);
+  history.push({ role: 'user', content: q });
+  addMsg('ai', '', true);
+
+  try {
+    const prompt = `다음은 (주)산하에코종합건설 온보딩 자료 전체 내용입니다:\n\n${CONTEXT}\n\n위 내용을 바탕으로 신입사원의 질문에 친절하고 간결하게 한국어로 답해주세요. 자료에 없는 내용은 "온보딩 자료에 해당 내용이 없습니다. 멘토(사수)에게 직접 확인해보세요!"라고 안내해주세요.\n\n질문: ${q}`;
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      }
+    );
+    const data = await res.json();
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || '답변을 가져오지 못했습니다.';
+    document.getElementById('typing-bub')?.closest('.msg')?.remove();
+    addMsg('ai', answer);
+    history.push({ role: 'ai', content: answer });
+  } catch (e) {
+    document.getElementById('typing-bub')?.closest('.msg')?.remove();
+    addMsg('ai', '오류가 발생했습니다. API Key와 네트워크 상태를 확인해주세요.');
+  }
+  btn.disabled = false;
+  input.focus();
+}
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+</script>
+</body>
+</html>
